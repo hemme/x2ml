@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "X2ml", "X2ml\X2ml.csproj", "{02253979-58FB-422A-AB22-A827A728C5E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "X2ml.Tests", "X2ml.Tests\X2ml.Tests.csproj", "{3ACF2C1D-934E-4B25-BFE4-A9FB19AD373F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3AD0AC2E-0B72-47C8-A782-D39A9D38113E}"
+	ProjectSection(SolutionItems) = preProject
+		Local.testsettings = Local.testsettings
+		TraceAndTestImpact.testsettings = TraceAndTestImpact.testsettings
+		X2ml.vsmdi = X2ml.vsmdi
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 3
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs16
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = X2ml.Tests\\X2ml.Tests.csproj
+		SccProjectName1 = X2ml.Tests
+		SccLocalPath1 = X2ml.Tests
+		SccProjectUniqueName2 = X2ml\\X2ml.csproj
+		SccProjectName2 = X2ml
+		SccLocalPath2 = X2ml
+	EndGlobalSection
+	GlobalSection(TestCaseManagementSettings) = postSolution
+		CategoryFile = X2ml.vsmdi
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{02253979-58FB-422A-AB22-A827A728C5E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{02253979-58FB-422A-AB22-A827A728C5E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{02253979-58FB-422A-AB22-A827A728C5E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{02253979-58FB-422A-AB22-A827A728C5E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3ACF2C1D-934E-4B25-BFE4-A9FB19AD373F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3ACF2C1D-934E-4B25-BFE4-A9FB19AD373F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3ACF2C1D-934E-4B25-BFE4-A9FB19AD373F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3ACF2C1D-934E-4B25-BFE4-A9FB19AD373F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
