@@ -6,10 +6,8 @@ using System.Xml.Linq;
 
 namespace X2ml
 {
-    public sealed class X
+    public  class X
     {
-        private X Touched;
-
         private XElement ToXElement()
         {
             return new XElement(Name,
@@ -32,7 +30,7 @@ namespace X2ml
             return sb.ToString();          
         }
 
-        private void ToStringBuilder(StringBuilder sb)
+        protected virtual void ToStringBuilder(StringBuilder sb)
         {
             if (Type == XType.InnerText)
             {
@@ -92,6 +90,7 @@ namespace X2ml
         public List<X> Children { get; set; }
         public List<X> Attributes { get; set; }
         public string Value { get; set; }
+        //protected bool _isFirstChild;
 
         public X()
         {
@@ -165,7 +164,7 @@ namespace X2ml
 
         private void OnAddChildren(IEnumerable<X> content)
         {
-            var adding = content.Where(x => x.Type == XType.Element).Select(x => x.Root).ToArray();
+            var adding = content.Where(x => x.Type == XType.Element||x.Type==XType.InnerText).Select(x => x.Root).ToArray();
             adding.Any(a =>
             {
                 a.Parent = this;
@@ -173,6 +172,7 @@ namespace X2ml
             });
 
             Children.AddRange(adding);
+            //adding.First()._isFirstChild = true;
         }
 
         private void OnAddAttributes(IEnumerable<X> content)
@@ -190,8 +190,6 @@ namespace X2ml
         {
             get { return Type == XType.Element || Parent == null ? this : Parent.ParentElementOrSelf; }
         }
-
-        
 
         private X AddAttribute(X a)
         {
@@ -227,12 +225,25 @@ namespace X2ml
         
         public static X2 X2ml { get { return X2.Instance;  } }
 
+        public static XBound<T> BindTo<T>(IEnumerable<T> data)
+        {
+            return new XBound<T>(data);
+        }
+
+        public IEnumerable<X> Siblings()
+        {
+            return from s in Parent.Children
+                   where s != this
+                   select s;
+        }
 
         #region Operators
 
         public static X operator /(X x, string child)
         {
             var n = X.Element(child);
+            //n._isFirstChild = true;
+
             X p = x.ParentElementOrSelf;//x.Type == XType.Element ? x : x.Parent;
             n.Parent = p;
             p.Add(n);
@@ -247,6 +258,8 @@ namespace X2ml
 
         public static X operator *(X x, string content)
         {
+            if (String.IsNullOrEmpty(content)) return x;
+
             if (content[0] == '@') //adding attribute
             {
                 return x.AddAttribute(X.Attribute(content.Substring(1)));
@@ -269,6 +282,7 @@ namespace X2ml
 
             return e;
         }
+       
         #endregion
 
         #region Nested Types
@@ -289,10 +303,166 @@ namespace X2ml
                 get { return new X(name); }
             }
 
+            
+
             private static X2 _x2;
             public static X2 Instance
             {
                 get { return _x2 ?? (_x2 = new X2()); }
+            }
+
+        }
+
+        public sealed class XBound<T> : X
+        {
+            private Func<T, string> _selector;
+            private readonly IEnumerable<T> _data;
+
+            internal XBound(X x) : this (x, null) { }
+            
+            internal XBound(X x, IEnumerable<T> data):this(data)
+            {
+                base.Name = x.Name;
+                base.Parent = x.Parent;
+                base.Value = x.Value;
+                base.Type = x.Type;
+                base.Attributes.AddRange(x.Attributes);
+                OnSubstitute(x);
+
+                base.Children.AddRange(x.Children);
+            }
+
+            private void OnSubstitute(X x)
+            {
+                if (x.Parent!=null)
+                {
+                    var pos = x.Parent.Children.IndexOf(x);
+                    x.Parent.Children.Insert(pos,this);
+
+                    x.Parent.Children.Remove(x);
+                    x.Parent = null;
+                }
+            }
+
+            internal XBound(IEnumerable<T> data)
+            {
+                _data = data;
+            }
+
+            internal XBound(Func<T, string> selector)
+            {
+                _selector = selector;
+            }
+
+            #region Operators
+
+            public static XBound<T> operator / (XBound<T> b, string s)
+            {
+                return new XBound<T>((X)b / s);
+            }
+
+            public static XBound<T> operator % (XBound<T> b, string s)
+            {
+                return new XBound<T>((X)b % s);
+            }
+
+            public static XBound<T> operator * (XBound<T> b, string s)
+            {
+                var x = (X)b * s;
+                return new XBound<T>(x);
+            }
+
+            public static XBound<T> operator * (XBound<T> b, Func<T, string> selector)
+            {
+                return b * new XBound<T>(selector);
+            }
+
+            public static XBound<T> operator * (X x, XBound<T> placeholder)
+            {
+                var b = new XBound<T>(x, placeholder._data);
+                b._selector = placeholder._selector;
+
+                return b;
+            }
+            #endregion
+
+            private IEnumerable<T> FetchData(out XBound<T> owner)
+            {
+                XBound<T> p = this;
+                while (p!=null && p._data==null)
+                {
+                    p = p.Parent as XBound<T>;
+                }
+                return (owner=(p ?? this))._data;
+            }
+
+            public XBound<T> DataRoot
+            {
+                get
+                {
+                    var dr = this;
+                    while (dr != null && dr._data == null)
+                        dr = dr.Parent as XBound<T>;
+
+                    return dr;
+                }
+            }
+
+            public IEnumerable<X> BindAndSpawn()
+            {
+                XBound<T> owner;
+                var data = FetchData(out owner);
+                return BindAndSpawn(owner, data);
+            }
+
+            private IEnumerable<X> BindAndSpawn(XBound<T> dataowner, IEnumerable<T> data)
+            {
+                /*
+                  "tr" * X.BindTo(elements)         "1","2"
+                      / "td" * (e => e)       <tr><td>1</td><td>&nbsp;</td><td>1</td></tr>
+                      % "td" * "&nbsp;"       <tr><td>2</td><td>&nbsp;</td><td>2</td></tr>
+                      % "td" * (e => e);
+                */
+                var dbc = new List<X>();
+                XBound<T> cb;
+                foreach (T d in data)
+                {
+                    var boundItems = new List<X>();
+                    foreach (X xc in Children)
+                    {
+                        cb = xc as XBound<T>;
+                        if (cb != null)
+                        {
+                            var value = (cb._selector != null ? cb._selector(d) : cb.Value != null ? cb.Value : null);
+                            var x = (value != null) ? new X(cb.Name) * value : new X(cb.Name);
+
+                            var cb2 = cb.BindAndSpawn(dataowner, data);
+                            x.OnAddChildren(cb2);
+                            x.OnAddAttributes(cb2);
+
+                            boundItems.Add(x);
+                        }
+                        else
+                        {
+                            boundItems.Add(xc);
+                        }
+                    }
+                    var newBorn = new X(Name);
+                    var b = newBorn * Value;
+                    newBorn.OnAddChildren(boundItems);
+                    dbc.Add(newBorn);
+                }
+                return dbc;
+            }
+
+            protected override void ToStringBuilder(StringBuilder sb)
+            {
+                if (_data != null)
+                {
+                    foreach (var x in BindAndSpawn())
+                        x.ToStringBuilder(sb);
+                }
+                else base.ToStringBuilder(sb);
             }
         }
 
