@@ -6,7 +6,7 @@ using System.Xml.Linq;
 
 namespace X2ml
 {
-    public  class X
+    public partial  class X
     {
         private XElement ToXElement()
         {
