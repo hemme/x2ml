@@ -36,6 +36,14 @@ namespace X2ml.Tests
         }
 
         [TestMethod]
+        public void One_Child_Using_Constants()
+        {
+            var x = X.X2ml;
+            var x2ml = x[X.HTML] / X.HEAD % X.BODY;
+            var xml = CastAndString(x2ml);
+            Assert.AreEqual(XElement.Parse("<html><head /><body /></html>").ToString(), xml);
+        }
+        [TestMethod]
         public void Two_Children()
         {
             var x = X.X2ml;
