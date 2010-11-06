@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="X2mlTest.cs" />
+    <Compile Include="XBoundTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\X2ml\X2ml.csproj">
