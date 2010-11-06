@@ -43,6 +43,7 @@ namespace X2ml.Tests
             var xml = CastAndString(x2ml);
             Assert.AreEqual(XElement.Parse("<html><head /><body /></html>").ToString(), xml);
         }
+
         [TestMethod]
         public void Two_Children()
         {
@@ -88,7 +89,7 @@ namespace X2ml.Tests
                     / "body"
                         / "div"
                                 * "@style=margin:0"
-                                * "@id=main"
+                                * "#main"
                             / "h1" * "Hello X!" //...otherwise it creates an element value
                             % "p" * "This html file has been generated with X.";
             var xml = CastAndString(x);
@@ -174,25 +175,13 @@ namespace X2ml.Tests
             Assert.AreEqual("<r><a>A<b>B</b></a><c/></r>", x2ml.ToXmlString());
         }
 
-        [TestMethod]
-        public void Collection_Binding()
-        {
-            var x = X.X2ml;
-            var elements = new[] {new {Name = "foo", Value = "bar"}, new {Name="baz", Value="boom"}};
-            var x2ml = x["body"] / "table" / "tr" * X.BindTo(elements)
-                                                / "td" * (e => e.Name)
-                                                % "td" * "&nbsp;"
-                                                % "td" * (e => e.Value);
-            Assert.AreEqual("<body><table><tr><td>foo</td><td>&nbsp;</td><td>bar</td></tr><tr><td>baz</td><td>&nbsp;</td><td>boom</td></tr></table></body>", 
-                x2ml.ToXmlString());
-        }
+        
 
         [TestMethod]
         public void X_Siblings_Contains_All_Same_Level_Element_But_Self()
         {
-            var x = X.X2ml;
-            var x2ml = x["1"] / "2.1" % "2.2" * "@22" % "2.3" ;
-            var crumbs = new[] {"/1/2.1", "/1/2.2", "/1/2.3"};
+            var x2ml = X.X2ml["1"] / "2.1" % "2.2" * "@a2=v2" % "2.3" ;
+            var crumbs = new[] {"/1/2.1", "/1/2.2[a2=v2]", "/1/2.3"};
             foreach (var s in x2ml.Root.Children.First().Siblings())
             {
                 CollectionAssert.Contains(crumbs, s.BreadCrumb);
@@ -200,91 +189,33 @@ namespace X2ml.Tests
             }
         }
 
+       
+
+        
         [TestMethod]
-        public void BindAndSpawn_With_No_Data_Returns_Empty_Collection()
+        public void Breadcrumb()
         {
             var x = X.X2ml;
-            
-            var empty = new List<char>();
-            var x2ml = x["tr"] * X.BindTo(empty) 
-                         / "td" * (c => c.ToString());
-            Assert.IsTrue(x2ml.BindAndSpawn().Count()==0);
+            var x2ml = x["a"]/"b"/"c";
+            Assert.AreEqual("/a/b/c",x2ml.BreadCrumb);
+
+            x2ml = x["a"]/"b"*"text";
+            Assert.AreEqual("/a/b",x2ml.BreadCrumb);
+
+            x2ml = x["a"]/"b"*"@a1=v1";
+            Assert.AreEqual("/a/b[a1=v1]", x2ml.BreadCrumb);
+
+            x2ml = x2ml/"c"*"@a2=v2"*"@id=id2";
+            Assert.AreEqual("/a/b[a1=v1]/c[a2=v2,id=id2]", x2ml.BreadCrumb);
+
+            Assert.AreEqual("/a", x2ml.Root.BreadCrumb);
         }
 
         [TestMethod]
-        public void DataRoot_Returns_XBound_Object()
+        public void Hashtag_Recognition()
         {
-            var x = X.X2ml;
-            var chars = new[] { 'a', 'b', 'c' };
-
-            var x2ml = x["tr"] * X.BindTo(chars)
-                         / "td" * (c => c.ToString());
-
-            var root = x2ml.DataRoot;
-            Assert.IsTrue(root.Name == "tr");
-        }
-
-        [TestMethod]
-        public void BindAndSpawn_With_N_Data_Returns_Collection_With_N_Elements()
-        {
-            var x = X.X2ml;
-            var chars = new[] { 'a', 'b', 'c' };
-            
-            var x2ml = x["tr"] * X.BindTo(chars)
-                         / "td" * (c => c.ToString());
-            Assert.IsTrue(x2ml.DataRoot.BindAndSpawn().Count() == chars.Length);
-        }
-
-        [TestMethod]
-        public void Elements_After_BindAndSpawn_Have_Right_Structure()
-        {
-            var x = X.X2ml;
-            var chars = new[] { '*', '*' };
-
-            var x2ml = x["A"] * X.BindTo(chars)
-                       / "B" * (c => c.ToString())
-                       % "C" * (c => c.ToString())
-                       % "D" * "@e";// *(c => c.ToString());
-
-            foreach (var k in x2ml.DataRoot.BindAndSpawn())
-            {
-                Assert.AreEqual("/A", k.BreadCrumb);
-                Assert.AreEqual("/A/B", k.Children[0].BreadCrumb);
-                Assert.AreEqual("/A/C", k.Children[1].BreadCrumb);
-                Assert.AreEqual("/A/D", k.Children[2].BreadCrumb);
-
-                var xe = (XElement) k;
-                Assert.AreEqual("<A><B>*<B><C>*</C><D e='*'/></A>", k.ToString());
-            }
-        }
-
-        [TestMethod]
-        public void Elements_After_BindAndSpawn_Contains_Right_Data()
-        {
-            var x = X.X2ml;
-            var chars = new[] { '?', '!' };
-
-            var x2ml = x["A"] * X.BindTo(chars)
-                           / "B" * (c => c.ToString())  // <B>?|!</B>
-                           % "C" * (c => "*")           // <C>*</C>
-                           % "D" * "!";                 // <D>!</D>
-            var bound = x2ml.DataRoot.BindAndSpawn().ToList();
-            for (var i = 0; i<chars.Length;i++)
-                Assert.AreEqual("<A><B>"+chars[i]+"</B><C>*</C><D>!</D></A>", bound[i].ToXmlString());
-        }
-
-        [TestMethod]
-        public void DeepBinding()
-        {
-            var x = X.X2ml;
-            var chars = new[] { '?', '!' };
-
-            var x2ml = x["a"] * X.BindTo(chars)
-                           / "b" * (c => c.ToString())
-                               / "c" * (c => "c" + c)
-                               % "d" * (c => "d" + c);
-            var bound = x2ml.DataRoot.BindAndSpawn().ToList()[1];
-            Assert.AreEqual("<a><b>!<c>c!</c><d>d!</d></b></a>", bound.ToXmlString());
+            var x2ml = X.X2ml["a"]*"#aid";
+            Assert.AreEqual("/a[id=aid]",x2ml.BreadCrumb);
         }
     }
 
