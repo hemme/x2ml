@@ -133,5 +133,18 @@ namespace X2ml.Tests
             var x2ml = x["words"] / "length" * X.BindTo(names) * (k => k.Length);
             Assert.AreEqual("<words><length>3</length><length>6</length></words>",x2ml.ToXmlString());
         }
+
+        [TestMethod]
+        public void Enabling_bound_item_counting()
+        {
+            var names = new []{"foo","bar"};
+            var x = X.X2ml;
+            var x2ml = x["body"]/"div" * X.BindTo(names) * ((n,i)=>i)
+                       /"h2"*((n, i) => String.Format("Chapter #{0}", i+1))
+                       %"p"*(n => n);
+
+            var expected = "<body><div>0<h2>Chapter #1</h2><p>foo</p></div><div>1<h2>Chapter #2</h2><p>bar</p></div></body>";
+            Assert.AreEqual(expected,x2ml.ToXmlString());
+        }
     }
 }
