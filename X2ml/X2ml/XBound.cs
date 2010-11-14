@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace X2ml
@@ -9,7 +11,7 @@ namespace X2ml
     {
         public sealed class XBound<T> : X
         {
-            private Func<T, string> _selector;
+            private Func<T, int, object> _selector;
             private IEnumerable<T> _data;
 
             /// <summary>
@@ -57,6 +59,11 @@ namespace X2ml
 
             internal XBound(Func<T, string> selector)
             {
+                _selector = (t,i)=>selector(t);
+            }
+
+            internal XBound(Func<T, int, object> selector)
+            {
                 _selector = selector;
             }
 
@@ -85,13 +92,18 @@ namespace X2ml
 
             public static XBound<T> operator *(XBound<T> b, Func<T, object> selector)
             {
-                return b*new XBound<T>(t => SelectorConverter(t, selector));
+                return b * new XBound<T>(t => SelectorConverter(t, selector));
+            }
+
+            public static XBound<T> operator *(XBound<T> b, Func<T,int,object> expr)
+            {
+                return b * new XBound<T>(expr);
             }
 
             public static XBound<T> operator *(X x, XBound<T> placeholder)
             {
                 var b = new XBound<T>(x, placeholder._data);
-                b._selector = placeholder._selector;  
+                b._selector = placeholder._selector;
                 return b;
             }
 
@@ -104,7 +116,9 @@ namespace X2ml
             }
             #endregion
 
-            private static string SelectorConverter(T t, Func<T,object> selector)
+            #region DataBinding
+
+            private static string SelectorConverter(T t, Func<T, object> selector)
             {
                 var res = selector(t);
                 return res == null ? String.Empty : res.ToString();
@@ -149,33 +163,34 @@ namespace X2ml
             private IEnumerable<X> Spawn(IEnumerable<T> data)
             {
                 var items = new List<X>(data.Count());
-
+                int count = 0;
                 foreach (T d in data)
                 {
-                    var r = MakeX(d);
+                    var r = MakeX(d, count);
                     items.Add(r);
+                    count++;
                 }
 
                 return items;
             }
 
-            private X MakeX(T d)
+            private X MakeX(T d, int count)
             {
                 var x = new X(Name);
                 x.Type = Type;
                 if (x.StorageIsValue)
-                    x.Value = _selector != null ? _selector(d) : Value;
+                    x.Value = _selector != null ? _selector(d, count).ToString() : Value;
                 else
                 {
-                    var it = _selector != null ? _selector(d) : Value;
-                    if (it!=null) x.Add(X.InnerText(it));
+                    var it = _selector != null ? _selector(d, count).ToString() : Value;
+                    if (it != null) x.Add(X.InnerText(it));
                 }
 
                 //Attributes
                 foreach (var a in Attributes)
                 {
                     var ab = a as XBound<T>;
-                    X ar = ab != null ? ab.MakeX(d) : X.Attribute(a.Name, a.Value);
+                    X ar = ab != null ? ab.MakeX(d, count) : X.Attribute(a.Name, a.Value);
 
                     x.AddAttribute(ar);
                 }
@@ -185,9 +200,9 @@ namespace X2ml
                 {
                     var cb = c as XBound<T>;
                     X cr = null;
-                    if (cb != null) cr = cb.MakeX(d);
+                    if (cb != null) cr = cb.MakeX(d, count);
 
-                    else 
+                    else
                         switch (c.Type)
                         {
                             case XType.InnerText:
@@ -195,7 +210,7 @@ namespace X2ml
                                 cr = X.InnerText(c.Value);
                                 break;
                             case XType.Element:
-                                cr = new XBound<T>(X.Element(c.Name)).MakeX(d); //never occours?
+                                cr = new XBound<T>(X.Element(c.Name)).MakeX(d, count); //never occours?
                                 break;
 
                         }
@@ -203,6 +218,8 @@ namespace X2ml
                 }
                 return x;
             }
+
+            #endregion
 
             protected override void ToStringBuilder(StringBuilder sb)
             {
@@ -214,6 +231,5 @@ namespace X2ml
                 else base.ToStringBuilder(sb);
             }
         }
-
     }
 }
