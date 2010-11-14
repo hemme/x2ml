@@ -10,7 +10,7 @@ namespace X2ml
         public sealed class XBound<T> : X
         {
             private Func<T, string> _selector;
-            private readonly IEnumerable<T> _data;
+            private IEnumerable<T> _data;
 
             /// <summary>
             /// Creates a new XBound shallow-copying each property of x and replaces the new instance to x in its parent-child chain
@@ -83,13 +83,32 @@ namespace X2ml
                 return b * new XBound<T>(selector);
             }
 
+            public static XBound<T> operator *(XBound<T> b, Func<T, object> selector)
+            {
+                return b*new XBound<T>(t => SelectorConverter(t, selector));
+            }
+
             public static XBound<T> operator *(X x, XBound<T> placeholder)
             {
                 var b = new XBound<T>(x, placeholder._data);
                 b._selector = placeholder._selector;  
                 return b;
             }
+
+            public static XBound<T> operator *(XBound<T> b, XBound<T> placeholder)
+            {
+                var nb = new XBound<T>(b, placeholder._data);
+                nb._selector = placeholder._selector;
+                nb._data = b._data;
+                return nb;
+            }
             #endregion
+
+            private static string SelectorConverter(T t, Func<T,object> selector)
+            {
+                var res = selector(t);
+                return res == null ? String.Empty : res.ToString();
+            }
 
             private IEnumerable<T> FetchData(out XBound<T> owner)
             {

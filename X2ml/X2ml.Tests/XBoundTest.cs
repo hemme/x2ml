@@ -19,7 +19,7 @@ namespace X2ml.Tests
             var x2ml = x["A"] * X.BindTo(chars)
                        / "B" * (c => c.ToString())
                        % "C" * (c => c.ToString())
-                       % "D" * "@e"*(c => null); //just testing structure, value will appear in breadcroumb if not null
+                       % "D" * "@e"*(c => String.Empty); //just testing structure, value will appear in breadcroumb if not null
 
             foreach (var k in x2ml.DataRoot.BindAndSpawn())
             {
@@ -105,6 +105,33 @@ namespace X2ml.Tests
                                                 % "td" * (e => e.Value);
             Assert.AreEqual("<body><table><tr><td>foo</td><td>&nbsp;</td><td>bar</td></tr><tr><td>baz</td><td>&nbsp;</td><td>boom</td></tr></table></body>",
                 x2ml.ToXmlString());
+        }
+
+        [TestMethod]
+        public void Usage_Samples_1()
+        {
+            var tableInRam = new Dictionary<string, decimal> {{"Jan", 1000M}, {"Feb", 2000M}, {"Mar", 3000M}};
+            var x = X.X2ml;
+            var q1 = x["html"]/"body"/"table"*"@align=center"/"tr"*X.BindTo(tableInRam)
+                    /"th"*(e => e.Key) 
+                    %"td"*(e => e.Value.ToString());  
+
+            var q2 = x["html"] / "body" / "table" * "@align=center" /   
+                    from row in tableInRam
+                    select x["tr"] 
+                           / "th" * row.Key
+                           % "td" * row.Value.ToString();
+
+            Assert.AreEqual(q1.ToXmlString(),q2.ToXmlString());
+        }
+
+        [TestMethod]
+        public void Enabling_Func_T_object_in_binding_expressions()
+        {
+            var names = new[] { "foo", "foobar" };
+            var x = X.X2ml;
+            var x2ml = x["words"] / "length" * X.BindTo(names) * (k => k.Length);
+            Assert.AreEqual("<words><length>3</length><length>6</length></words>",x2ml.ToXmlString());
         }
     }
 }
